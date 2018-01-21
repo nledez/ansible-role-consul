@@ -17,6 +17,16 @@
   tags:
     - install
 
+- name: install consul bash completion
+  get_url:
+    url: "{{ consul_bash_completion_src }}"
+    dest: "{{ consul_bash_completion_dest }}"
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+    - install
+
 - name: install consul
   unarchive:
     src: "{{ consul_src }}"
@@ -60,19 +70,9 @@
     that:
       - 'consul_mode in ("client", "server")'
 
-- name: Gather facts
-  ec2_facts:
-  tags:
-    - configuration
-
-- set_fact:
-    consul_datacenter: "{{ ansible_ec2_placement_region }}"
-  tags:
-    - configuration
-
 - name: put consul configuration
   template:
-    src: "{{ consul_mode }}.json.j2"
+    src: "consul.json.j2"
     dest: /etc/consul.d/config.json
     owner: root
     group: root
@@ -82,7 +82,7 @@
 
 - name: put systemd configuration
   template:
-    src: "{{ consul_mode }}.service.j2"
+    src: "consul.service.j2"
     dest: /etc/systemd/system/consul.service
     owner: root
     group: root
@@ -91,7 +91,7 @@
 
 - name: put upstart configuration
   template:
-    src: "{{ consul_mode }}.upstart.conf.j2"
+    src: "consul.upstart.conf.j2"
     dest: /etc/init/consul.conf
     owner: root
     group: root
@@ -112,6 +112,13 @@
   when: consul_service_started
   tags:
     - service
+
+- name: wait consul
+  wait_for:
+    host: 127.0.0.1
+    port: 8500
+    delay: 1
+    timeout: 300
 
 - include: dnsmasq.yml
   when: consul_dnsmasq
